@@ -1,0 +1,6 @@
+.paket/paket.exe
+bin/
+obj/
+packages/
+obj/Debug/netcoreapp1.0/Projects.dll
+obj/Debug/netcoreapp1.0/Projects.pdb
