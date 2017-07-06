@@ -2,51 +2,59 @@
 #r "E:/Projects/FParsec/packages/FParsec/lib/portable-net45+netcore45+wpa81+wp8/FParsec.dll"
 open FParsec
 open System.Collections.Generic
+open System
+
 type UserState = unit // doesn't have to be unit, of course
 type Parser<'t> = Parser<'t, UserState>
 
-let test p str = 
-    match run p str with 
-    | Success(result, _, _) -> printfn "Success: %A" result
-    | Failure(errorMsg, _, _) -> printfn "Failure: %s" errorMsg
- 
-let str = pstring
-let floatBetweenBrackets : Parser<_> = str "[" >>. pfloat .>> str "]"
-let psep : Parser<_> = sepBy pfloat (pstring ",")
-
-let identifier : Parser<_> = 
-    let isIdentifierFirstChar c = isDigit c || c = '_'
-    let isIdentifierChar c = isLetter c || c = '_'
-    many1Satisfy2L isIdentifierFirstChar isIdentifierChar "cenas" .>> spaces 
-
-test (many1Satisfy2 isDigit (fun c -> isLetter c || c = ' ')) "1ab ac"
-test (anyOf "\\\n\r\t\"") "\"cd"
-
-let mp: Parser<_> = pipe2 pfloat (str "€") (fun a b -> string (a - 10.0) + b)
-
-test mp "1.25€"
-
-let pt: Parser<_> = pfloat .>>. (str "€")
-
-let testStrinReturn : Parser<_> = (stringReturn "ca" true) <|> (stringReturn "co" false)
-
-test testStrinReturn "cnp"
-type Element = Text of string
-let t : Parser<_> = many1Satisfy (isNoneOf "<>'\"\\") |>> Text
-
-test t "teste<coiso/><cenas2></cenas2>"
-//era fixe poder fazer convert frombase 2 tobase 3
-
-type Op = | ConvertBase of baseFrom:int * baseTo:int * value:int
+type Op = | ConvertBase of baseFrom:int * baseTo:int * value:string
           | ReverseWord of string
+          | Fail of string
 
-let next : Parser<_> = 
+let replaceHexPrefix (s:string) = if s.StartsWith("0x") then s.Substring(2) else s
+let removeSpaces = String.filter (fun c -> c <> ' ')
+let toUpper (s:string)= s.ToUpper();
+let parseOp str = 
     let intws = pint32 .>> spaces
-    let parsebase = pstring "convert base " >>. pipe3 intws intws intws (fun a b c -> ConvertBase(a,b,c))
+    let parsebase = pstring "convert base " >>. pipe3 intws intws (restOfLine false |>> replaceHexPrefix |>> removeSpaces |>> toUpper) (fun a b c -> ConvertBase(a,b,c))
     let parseReverseWord = pstring "text reverse " >>. restOfLine false |>> ReverseWord
-    parsebase <|> parseReverseWord
+    
+    match run (parsebase <|> parseReverseWord) str with 
+    | Success(op,_,_) -> op
+    | Failure(message,_,_) -> Fail message
 
-let p str = run next str 
+let reverse (str:string) = Array.ofSeq str |> Array.rev |> System.String
 
-p "text reverse coisas"
+let toBaseTen fromBase (number:string) = 
+    let numberFromChar = 
+        function 
+        | c when c >= 'A' && c <= 'Z' -> 
+            printfn "%c" c |> ignore
+            (int c - int 'A') + 10 
+        | c -> 
+            printfn "%c" c |> ignore
+            Char.ToString(c) |> Int32.Parse
+    let numbers = number |> reverse |> Array.ofSeq |> Array.map numberFromChar
+    let inBase10 fromBase n w = n * (Math.Pow(fromBase |> float, w |> float) |> int)
+    if Array.isEmpty numbers || numbers |> Array.exists (fun n -> n > fromBase - 1) then 
+        None
+    else 
+        Some (numbers |> Array.mapi (fun i n-> inBase10 fromBase n i) |> Array.reduce (+))
 
+let fromBaseTen (toBase:int) number = 
+    let numberToValue n = if n >= 10 then 15 + int 'A' - 10 |> char |> string else n |> string
+    let rec inner nmb = 
+        if (nmb = 0) then [""] else  inner (nmb / toBase) @ [numberToValue (nmb % toBase)]
+    inner number |> List.skipWhile (fun n -> n = "0") |> List.reduce (+)
+
+let executeCommand cmd = 
+    let command = parseOp cmd
+    match command with
+    | ConvertBase (from, t, value) -> (toBaseTen from value |> Option.map (fromBaseTen t))
+    | ReverseWord word -> Some (reverse word)
+    | Fail str -> Some str
+
+printfn "%O" (executeCommand "convert base 16 10 ‭10111101‬")
+// printfn "%O" (executeCommand "text reverse coise")
+// let numberFromChar c = function | c when c >= 'A' && c <= 'Z' -> (int c - int 'A') + 10 | c -> Char.ToString(c) |> Int32.Parse
+// numberFromChar 'Z'
