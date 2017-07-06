@@ -17,7 +17,7 @@ let removeSpaces = String.filter (fun c -> c <> ' ')
 let toUpper (s:string)= s.ToUpper();
 let parseOp str = 
     let intws = pint32 .>> spaces
-    let parsebase = pstring "convert base " >>. pipe3 intws intws (restOfLine false |>> replaceHexPrefix |>> removeSpaces |>> toUpper) (fun a b c -> ConvertBase(a,b,c))
+    let parsebase = pstring "convert base " >>. pipe3 intws intws (restOfLine false) (fun a b c -> ConvertBase(a,b,c))
     let parseReverseWord = pstring "text reverse " >>. restOfLine false |>> ReverseWord
     
     match run (parsebase <|> parseReverseWord) str with 
@@ -30,10 +30,10 @@ let toBaseTen fromBase (number:string) =
     let numberFromChar = 
         function 
         | c when c >= 'A' && c <= 'Z' -> 
-            printfn "%c" c |> ignore
+            printfn "'%c'" c |> ignore
             (int c - int 'A') + 10 
         | c -> 
-            printfn "%c" c |> ignore
+            printfn "'%c'" c |> ignore
             Char.ToString(c) |> Int32.Parse
     let numbers = number |> reverse |> Array.ofSeq |> Array.map numberFromChar
     let inBase10 fromBase n w = n * (Math.Pow(fromBase |> float, w |> float) |> int)
@@ -61,5 +61,8 @@ let executeCommand cmd =
 
 [<EntryPoint>]
 let main argv =
-     printfn "%O" (executeCommand "convert base 16 10 ‭10111101‬")
+    printfn "%A" (executeCommand "convert base 16 10 10111101")
+    0
+    
+    
     

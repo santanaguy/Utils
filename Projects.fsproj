@@ -15,6 +15,19 @@
   <ItemGroup>
     <PackageReference Include="FSharp.NET.Sdk" Version="1.0.0-beta-*" PrivateAssets="All" />
     <PackageReference Include="Microsoft.FSharp.Core.netcore" Version="1.0.0-alpha-161023" />
+    
+  </ItemGroup>
+  <ItemGroup>
+  <Reference Include="FParsecCS">
+      <HintPath>E:\Projects\FeedMe\packages\FParsec\lib\portable-net45+netcore45+wpa81+wpa8\FParsecCS.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+     <Reference Include="FParsec">
+      <HintPath>E:\Projects\FeedMe\packages\FParsec\lib\portable-net45+netcore45+wpa81+wpa8\FParsec.dll</HintPath>
+      <Private>True</Private>
+       <Paket>True</Paket>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <DotNetCliToolReference Include="dotnet-compile-fsc">
